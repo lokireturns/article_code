@@ -51,16 +51,16 @@ func (hll *HyperLogLog) addItem(value string) {
 }
 
 func (hll *HyperLogLog) estimateCardinality() float64 {
-	var cardinality float64
-	for i := 0; i < hll.b; i++ {
+	var harmonicSum float64
+	for i := 0; i < len(hll.buckets); i++ {
 		if hll.buckets[i] > 0 {
 			rj := float64(hll.buckets[i])
-			cardinality += math.Pow(2, -rj)
+			harmonicSum += math.Pow(2, -rj)
 		}
 	}
 
 	m := float64(len(hll.buckets))
-	cardinality = hll.constant * m * (m / cardinality)
+	cardinality := hll.constant * m * (m / harmonicSum)
 	return cardinality
 
 }
