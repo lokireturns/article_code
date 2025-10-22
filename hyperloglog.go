@@ -8,17 +8,8 @@ import (
 )
 
 /*
-HyperLogLog Struct:
-
-- Initialised with m buckets (array if ints?) which if of size 2^b
-- Init with `b` number of leading bits we want to use (how do we decide that?)
-
-1. Hash the input value
-2. Convert it to binary representation
-3. Find the `b` bits from MSB to find bucket number
-   b - Number of initial bits in a binary representation of a hash value
-4. Find `p` from remaining bits
-5. Store in bucker number the max(m[b],p)
+Hyperloglog implementation as per:
+- https://en.wikipedia.org/wiki/HyperLogLog
 */
 
 type HyperLogLog struct {
