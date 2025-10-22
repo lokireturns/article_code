@@ -1,3 +1,5 @@
+//go:build hyperloglog
+
 package main
 
 import (
