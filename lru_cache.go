@@ -24,8 +24,11 @@ func (lc *LruCache) put(key int, val string) {
 
 	if exists {
 		fmt.Print("key found: %d", key)
+	} else {
+		cachedNode := *lc.head
+		newNode := Node{next: &cachedNode, prev: lc.tail, contents: val}
+		cachedNode.prev = &newNode
 	}
-	// If not insert as new head
 
 }
 
