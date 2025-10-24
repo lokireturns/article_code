@@ -37,7 +37,9 @@ func (lc *LruCache) newHead(node *Node, key int) {
 }
 
 func (lc *LruCache) evict() {
-	if 
+	var penultimateNode *Node = lc.tail.prev
+	lc.tail = penultimateNode
+	lc.tail.next = nil
 }
 
 func (lc *LruCache) put(key int, val string) {
