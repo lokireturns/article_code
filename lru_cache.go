@@ -22,6 +22,18 @@ type LruCache struct {
 }
 
 func (lc *LruCache) newHead(node *Node, key int) {
+	if node.next != nil {
+		node.next.prev = node.prev // What if theres no previous node?
+	}
+
+	if node.prev != nil {
+		node.prev.next = node.next
+	}
+
+	if node == lc.tail {
+		lc.tail = node.prev
+	}
+
 	cachedHead := lc.head
 	lc.head = node
 
@@ -66,19 +78,6 @@ func (lc *LruCache) put(key int, val string) {
 		targetNode.val = val
 		// Only move to head if not already there
 		if targetNode != lc.head {
-			// Shouldn't we first check if its the only node?
-			if targetNode.next != nil {
-				targetNode.next.prev = targetNode.prev // What if theres no previous node?
-			}
-
-			if targetNode.prev != nil {
-				targetNode.prev.next = targetNode.next
-			}
-
-			if targetNode == lc.tail {
-				lc.tail = targetNode.prev
-			}
-
 			lc.newHead(targetNode, key)
 		}
 	} else {
@@ -92,6 +91,16 @@ func (lc *LruCache) put(key int, val string) {
 		lc.currentSize++
 	}
 
+}
+
+func (lc *LruCache) get(key int) (string, bool) {
+	targetNode, exists := lc.index[key]
+	if !exists {
+		return "", false
+	}
+	lc.newHead(targetNode, targetNode.key)
+
+	return targetNode.val, true
 }
 
 func newCache(capacity int) *LruCache {
