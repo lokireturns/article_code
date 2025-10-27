@@ -53,7 +53,6 @@ func (lc *LruCache) evict() {
 		lc.head = nil
 	}
 
-	lc.tail = nodeToRemove.prev
 	lc.currentSize--
 }
 
@@ -64,9 +63,9 @@ func (lc *LruCache) put(key int, val string) {
 		targetNode.val = val
 		// Only move to head if not already there
 		if targetNode != lc.head {
-
+			// Shouldn't we first check if its the only node?
 			if targetNode.next != nil {
-				targetNode.next.prev = targetNode.prev
+				targetNode.next.prev = targetNode.prev // What if theres no previous node?
 			}
 
 			if targetNode.prev != nil {
