@@ -2,6 +2,8 @@
 
 package main
 
+import "sync"
+
 // Some page in our buffer pool
 type Node struct {
 	next *Node
@@ -11,6 +13,7 @@ type Node struct {
 }
 
 type LruCache struct {
+	mu          sync.Mutex
 	head        *Node
 	tail        *Node
 	capacity    int
@@ -84,8 +87,8 @@ func (lc *LruCache) put(key int, val string) {
 			lc.evict()
 		}
 
-		newNode := Node{val: val, key: key}
-		lc.newHead(&newNode, newNode.key)
+		newNode := &Node{val: val, key: key}
+		lc.newHead(newNode, newNode.key)
 		lc.currentSize++
 	}
 
@@ -94,7 +97,7 @@ func (lc *LruCache) put(key int, val string) {
 func newCache(capacity int) *LruCache {
 	return &LruCache{
 		capacity: capacity,
-		index:    make(map[int]*Node),
+		index:    make(map[int]*Node, capacity),
 	}
 
 }
