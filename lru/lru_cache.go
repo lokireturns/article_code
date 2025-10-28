@@ -1,8 +1,7 @@
-//go:build lru_cache
-
-package main
-
-import "sync"
+// Package lru implements a simple LRU cache
+// This implementation is non-thread safe
+// thread safety is expected at application or buffer pool level
+package lru
 
 // Some page in our buffer pool
 type Node struct {
@@ -12,8 +11,11 @@ type Node struct {
 	key  int
 }
 
+// Implements LRU cache algorithm
+//
+// - Hash map + Doubly Linked List
+// - O(1) for all operations
 type LruCache struct {
-	mu          sync.Mutex
 	head        *Node
 	tail        *Node
 	capacity    int
@@ -21,7 +23,7 @@ type LruCache struct {
 	currentSize int
 }
 
-func (lc *LruCache) newHead(node *Node, key int) {
+func (lc *LruCache) NewHead(node *Node, key int) {
 	if node.next != nil {
 		node.next.prev = node.prev // What if theres no previous node?
 	}
@@ -50,7 +52,7 @@ func (lc *LruCache) newHead(node *Node, key int) {
 	lc.index[key] = lc.head
 }
 
-func (lc *LruCache) evict() {
+func (lc *LruCache) Evict() {
 	if lc.tail == nil {
 		return // Nothing to evict
 	}
@@ -71,49 +73,42 @@ func (lc *LruCache) evict() {
 	lc.currentSize--
 }
 
-func (lc *LruCache) put(key int, val string) {
+func (lc *LruCache) Put(key int, val string) {
 	targetNode, exists := lc.index[key]
 
 	if exists {
 		targetNode.val = val
 		// Only move to head if not already there
 		if targetNode != lc.head {
-			lc.newHead(targetNode, key)
+			lc.NewHead(targetNode, key)
 		}
 	} else {
 
 		if lc.currentSize == lc.capacity {
-			lc.evict()
+			lc.Evict()
 		}
 
 		newNode := &Node{val: val, key: key}
-		lc.newHead(newNode, newNode.key)
+		lc.NewHead(newNode, newNode.key)
 		lc.currentSize++
 	}
 
 }
 
-func (lc *LruCache) get(key int) (string, bool) {
+func (lc *LruCache) Get(key int) (string, bool) {
 	targetNode, exists := lc.index[key]
 	if !exists {
 		return "", false
 	}
-	lc.newHead(targetNode, targetNode.key)
+	lc.NewHead(targetNode, targetNode.key)
 
 	return targetNode.val, true
 }
 
-func newCache(capacity int) *LruCache {
+func NewLruCache(capacity int) *LruCache {
 	return &LruCache{
 		capacity: capacity,
 		index:    make(map[int]*Node, capacity),
 	}
 
-}
-
-func main() {
-	cache := newCache(2)
-	cache.put(35, "foo")
-	cache.put(22, "bar")
-	cache.put(22, "Cheese")
 }
