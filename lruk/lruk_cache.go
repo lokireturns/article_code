@@ -17,7 +17,7 @@ type Node struct {
 	next      *Node
 	prev      *Node
 	key       int
-	access    []int
+	access    []float64
 	evictable bool
 }
 
@@ -26,7 +26,7 @@ type Node struct {
 func NewNode(key int, k int) *Node {
 	return &Node{
 		key:    key,
-		access: make([]int, k),
+		access: make([]float64, k),
 	}
 }
 
@@ -43,6 +43,7 @@ type LrukCache struct {
 	index       map[int]*Node
 	k           int
 	currentSize int
+	numOfNodes  int
 }
 
 func NewLrukCache(capacity int, k int) *LrukCache {
@@ -54,19 +55,32 @@ func NewLrukCache(capacity int, k int) *LrukCache {
 
 // Called when a page is pinned in the buffer pool
 func (lc *LrukCache) RecordAccess(frame_id int, page *Node) {
+	now := float64(time.Now().UnixMilli())
 	targetPage, exists := lc.index[frame_id]
 	if exists {
 		historySize := len(targetPage.access)
-		newHistory := make([]int, historySize)
-		for i := 0; i < historySize; i++ {
-			newHistory[i] = targetPage.access[i+1]
+		newHistory := make([]float64, historySize)
+		for i := 1; i < historySize; i++ {
+			newHistory[i-1] = targetPage.access[i]
 		}
-		targetPage.access[len(targetPage.access)-1] = int(time.Now().UnixMilli())
+		targetPage.access = newHistory
+		targetPage.access[len(targetPage.access)-1] = now
 	} else {
-		page.access[0] = int(time.Now().UnixMilli())
-		lc.tail.next = page
-		lc.tail = page
+		page.access[0] = now
+
+		// Handle empty list
+		if lc.head == nil {
+			lc.head = page
+			lc.tail = page
+		} else {
+			// Add to tail of existing list
+			lc.tail.next = page
+			page.prev = lc.tail
+			lc.tail = page
+		}
+
 		lc.index[frame_id] = page
+		lc.numOfNodes++
 	}
 }
 
@@ -96,33 +110,47 @@ func (lc *LrukCache) Evict() int {
 	if lc.currentSize < 1 {
 		return -1
 	}
-	now := time.Now().UnixMilli()
-	var maxkBackwardsDistance int64
+	now := float64(time.Now().UnixMilli())
+	var maxkBackwardsDistance float64
 	var evictionFrameId int
 
 	for i, p := range lc.index {
-		if p.evictable {
-			kBackwardsDistance := now - int64(p.access[(lc.k)-1])
+		if p.evictable && p.access[(lc.k)-1] > 0 {
+			kBackwardsDistance := now - float64(p.access[(lc.k)-1])
 			if kBackwardsDistance > maxkBackwardsDistance {
 				maxkBackwardsDistance = kBackwardsDistance
 				evictionFrameId = i
 			}
+		} else if p.evictable && p.access[(lc.k)-1] == 0 {
+			evictionFrameId = i
+			break
 		}
 	}
 	targetNode := lc.index[evictionFrameId]
 
 	// TODO do we need to nil the next and prev pointers of our
 	// target node to ensure its de allocated by garbage collector?
-	if lc.head == targetNode {
+	if lc.head == targetNode && targetNode.next != nil {
 		lc.head = targetNode.next
 	}
 
-	if lc.tail == targetNode {
+	if lc.tail == targetNode && targetNode.prev != nil {
 		lc.tail = targetNode.prev
 	}
 
-	targetNode.prev.next = targetNode.next
-	targetNode.next.prev = targetNode.prev
+	if targetNode.prev != nil && targetNode.next != nil {
+		targetNode.prev.next = targetNode.next
+	}
+
+	if targetNode.next != nil && targetNode.prev != nil {
+		targetNode.next.prev = targetNode.prev
+	}
+
+	// Help the garbage collector
+	targetNode.next = nil
+	targetNode.prev = nil
+
+	delete(lc.index, evictionFrameId)
 	lc.currentSize--
 	return evictionFrameId
 }
