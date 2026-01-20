@@ -10,26 +10,21 @@ struct Node {
     node_t* right;
 };
 
-node_t* init_bst(uint32_t root_val){
-    node_t *new_tree = (node_t*)malloc(sizeof(node_t));
-    new_tree->value = root_val;
-    new_tree->left = NULL;
-    new_tree->right = NULL;
-    return new_tree;
-}
-
-
-node_t* add_node(node_t *root, node_t *node){
+node_t* add_node(node_t *root, int value){
     
     if (root == NULL){
-        root = node;
+        node_t *new_node = (node_t*)malloc(sizeof(struct Node));
+        new_node->left = NULL;
+        new_node->right = NULL;
+        new_node->value = value;
+        root = new_node;
         return root;
     }   
 
-    if(node->value < root->value){
-        root->left = add_node(root->left, node);
-    } else if (node->value > root->value){
-        root->right = add_node(root->right, node);
+    if(value < root->value){
+        root->left = add_node(root->left, value);
+    } else if (value > root->value){
+        root->right = add_node(root->right, value);
     } else {
         perror("Could not add node");
         exit(EXIT_FAILURE);
@@ -45,19 +40,15 @@ void read_value(int * buffer){
 
 int main(int argc, char *argv[]){
     int root_val = 0;
-    printf("Enter root node val: \n");
+    printf("Enter root node val: ");
     scanf("%d", &root_val);
-    node_t *tree = init_bst(root_val);
+    node_t *tree = add_node(NULL,root_val);
     int buffer;
     while (true)
     {
         print_prompt();
         read_value(&buffer);
-        node_t *new_node = (node_t*)malloc(sizeof(struct Node));
-        new_node->left = NULL;
-        new_node->right = NULL;
-        new_node->value = buffer;
-        add_node(tree,new_node);
+        add_node(tree,buffer);
     }
     
 
